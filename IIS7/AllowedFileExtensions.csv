@@ -1,0 +1,11 @@
+fileExtension,Allowed
+.,TRUE
+.ashx,TRUE
+.aspx,TRUE
+.html,TRUE
+.doc,TRUE
+.docx,TRUE
+.css,TRUE
+.js,TRUE
+.json,TRUE
+.jpg,TRUE
