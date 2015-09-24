@@ -1,10 +1,10 @@
 # Update with the location of the downloaded module files # 
-$downloadFolder = "C:\IIS7STIGs\"
+$downloadFolder = "C:\PermissionsFunctions\"
 
 # Get Program Files directory and set Modules directory path #
 $userProfile = $env:USERPROFILE
 $modulesPath = Join-Path -Path $userProfile -ChildPath "Documents\WindowsPowerShell\Modules\"
-$iis7ModulePath = Join-Path -Path $modulesPath -ChildPath "IIS7STIGs\"
+$permissionsModulePath = Join-Path -Path $modulesPath -ChildPath "PermissionsFunctions\"
 
 if (!(Test-Path $modulesPath)) {
 
@@ -14,12 +14,12 @@ if (!(Test-Path $modulesPath)) {
 
 }
 
-if (!(Test-Path $iis7ModulePath)) {
+if (!(Test-Path $permissionsModulePath)) {
 
-    Write-Output "$iis7ModulePath does not exist - creating"
+    Write-Output "$permissionsModulePath does not exist - creating"
 
-    New-Item $iis7ModulePath -type directory
+    New-Item $permissionsModulePath -type directory
 
-    Copy-Item -Path $downloadFolder\* -Destination $iis7ModulePath -Recurse
+    Copy-Item -Path $downloadFolder\* -Destination $permissionsModulePath -Recurse
 
 }

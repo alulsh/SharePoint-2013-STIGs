@@ -1,6 +1,9 @@
 # Get IIS version
 $iisVersion = (Get-ItemProperty HKLM:\SOFTWARE\Microsoft\InetStp\).MajorVersion
 
+# Get operating system version
+$windowsVersion = (Get-WmiObject win32_operatingsystem).version
+
 ### Begin IIS 7 Server STIGs ###
 function Disable-SMTP {
 	<#
@@ -20,39 +23,23 @@ function Disable-SMTP {
     https://www.stigviewer.com/stig/iis_7.0_web_server/2015-06-01/finding/V-2261
 	#>
     
-    BEGIN {
+	Import-Module ServerManager
+
+    $SMTP = Get-WindowsFeature SMTP-Server
+
+    if ($SMTP.Installed -eq $true){
     
-        Write-Output "Applying V-2261 from the IIS 7 Server STIG"
+	    Write-Output "Server is not STIG compliant - uninstalling SMTP service"
+        Remove-WindowsFeature SMTP-server
+		Write-Output "SMTP service uninstalled"
+
+	}
+
+    else {
     
-    }
-
-    PROCESS {
-
-	    Import-Module ServerManager
-
-        $SMTP = Get-WindowsFeature SMTP-Server
-
-        if ($SMTP.Installed -eq $true){
+	    Write-Output "Server is STIG compliant - SMTP Service is not installed"
     
-	        Write-Output "Server is not STIG compliant - uninstalling SMTP service"
-            Remove-WindowsFeature SMTP-server
-		    Write-Output "SMTP service uninstalled"
-
-	    }
-
-        else {
-    
-	        Write-Output "Server is STIG compliant - SMTP Service is not installed"
-    
-	    }
-
-    }
-
-    END {
-
-        Write-Output "Applied V-2261 from the IIS 7 Server STIG"
-
-    }
+	}
 
 }
 
@@ -74,101 +61,85 @@ function Remove-SampleCode {
     https://www.stigviewer.com/stig/iis_7.0_web_server/2015-06-01/finding/V-13621
 	#>
 
-	BEGIN {
-    
-        Write-Output "Applying V-13261 from the IIS 7 Server STIG"
-    
-    }
-
-    PROCESS {
-
-		$iisRootFolder = "C:\inetpub"
-		$adminScriptsFolder = Join-Path -Path $iisRootFolder -Childpath "AdminScripts"
-		$0409Folder = Join-Path -Path $adminScriptsFolder -Childpath "0409"
-		$sampleFolder = Join-Path -Path $iisRootFolder -Childpath "scripts\IISSamples"
-		$msadcFolder = "C:\Program Files\Common Files\system\msadc"
+	$iisRootFolder = "C:\inetpub"
+	$adminScriptsFolder = Join-Path -Path $iisRootFolder -Childpath "AdminScripts"
+	$0409Folder = Join-Path -Path $adminScriptsFolder -Childpath "0409"
+	$sampleFolder = Join-Path -Path $iisRootFolder -Childpath "scripts\IISSamples"
+	$msadcFolder = "C:\Program Files\Common Files\system\msadc"
 	
-		Set-Location $iisRootFolder
+	Set-Location $iisRootFolder
 
-		# Delete AdminScripts folder and subfolders #
+	# Delete AdminScripts folder and subfolders #
 
-		if (Test-Path $adminScriptsFolder) {
+	if (Test-Path $adminScriptsFolder) {
         
-			Write-Output "Not STIG compliant - AdminScripts subfolder found in $iisRootFolder - deleting files and sub-folders"
+		Write-Output "Not STIG compliant - AdminScripts subfolder found in $iisRootFolder - deleting files and sub-folders"
         
-			takeown /f AdminScripts /r /d y
+		takeown /f AdminScripts /r /d y
         
-			if (Test-Path $0409Folder) {
+		if (Test-Path $0409Folder) {
             
-				takeown /f $0409Folder /r /d y
-				CMD /C "icacls $0409Folder /grant BUILTIN\ADMINISTRATORS:(OI)(CI)F"
+			takeown /f $0409Folder /r /d y
+			CMD /C "icacls $0409Folder /grant BUILTIN\ADMINISTRATORS:(OI)(CI)F"
             
-				Push-Location $0409Folder
-				Get-ChildItem * -Recurse | Remove-Item
-				Pop-Location
-
-				Write-Output "$0409Folder deleted"
-        
-			}
-        
-			Push-Location $adminScriptsFolder
+			Push-Location $0409Folder
 			Get-ChildItem * -Recurse | Remove-Item
 			Pop-Location
 
-			Remove-Item $adminScriptsFolder -Recurse
-        
 			Write-Output "$0409Folder deleted"
         
 		}
-
-		else {
-
-			Write-Output "STIG Compliant - $adminScriptsFolder does not exist"
-    
-		}
-
-		# Delete Sample folder #
-
-		if (Test-Path $sampleFolder) {
         
-			Write-Output "$sampleFolder folder exists - please delete"
-    
-		}
-		else {
-    
-			Write-Output "$sampleFolder does not exist"
-    
-		}
+		Push-Location $adminScriptsFolder
+		Get-ChildItem * -Recurse | Remove-Item
+		Pop-Location
 
-		# Delete MSADC folder #
-
-		if (Test-Path $msadcFolder) {
+		Remove-Item $adminScriptsFolder -Recurse
         
-			Write-Output "Not STIG compliant - $msadcFolder folder exists - deleting"
+		Write-Output "$0409Folder deleted"
         
-			Set-Location "C:\Program Files\Common Files\System\"
-        
-			takeown /f msadc /r /d y
-			icacls msadc /grant Administrators:f /t /q
-			Remove-Item $msadcFolder -recurse
-        
-			Write-Output "Deleted $msadcFolder"
-        
-		}
-    
-		else {
-    
-			Write-Output "STIG compliant - $msadcFolder does not exist"
-    
-		}
-
 	}
 
-    END {
+	else {
 
-        Write-Output "Applied V-13261 from the IIS 7 Server STIG"
+		Write-Output "STIG Compliant - $adminScriptsFolder does not exist"
+    
+	}
 
-    }
+	# Delete Sample folder #
+
+	if (Test-Path $sampleFolder) {
+        
+		Write-Output "$sampleFolder folder exists - please delete"
+    
+	}
+	else {
+    
+		Write-Output "$sampleFolder does not exist"
+    
+	}
+
+	# Delete MSADC folder #
+
+	if (Test-Path $msadcFolder) {
+        
+		Write-Output "Not STIG compliant - $msadcFolder folder exists - deleting"
+        
+		Set-Location "C:\Program Files\Common Files\System\"
+        
+		takeown /f msadc /r /d y
+		icacls msadc /grant Administrators:f /t /q
+		Remove-Item $msadcFolder -recurse
+        
+		Write-Output "Deleted $msadcFolder"
+        
+	}
+    
+	else {
+    
+		Write-Output "STIG compliant - $msadcFolder does not exist"
+    
+	}
 
 }
 
@@ -202,33 +173,17 @@ function Set-MaxConnections {
 		[long]$Limit = 4294967294
 	)
 
-	BEGIN {
-    
-        Write-Output "Applying V-2240 from the IIS 7 Site STIG"
-    
-    }
+	$serverConfiguration = "/system.applicationHost/sites/*"
 
-	PROCESS {
+	$applicationHosts = Get-WebConfiguration -filter $serverConfiguration
 
-		$serverConfiguration = "/system.applicationHost/sites/*"
-
-		$applicationHosts = Get-WebConfiguration -filter $serverConfiguration
-
-		foreach ($application in $applicationHosts) {
+	foreach ($application in $applicationHosts) {
         
-			$name = $application.Name
+		$name = $application.Name
         
-			Set-WebConfigurationProperty -Filter $serverConfiguration -name Limits -Value @{MaxConnections=$limit}
-
-		}
+		Set-WebConfigurationProperty -Filter $serverConfiguration -name Limits -Value @{MaxConnections=$limit}
 
 	}
-
-	END {
-
-        Write-Output "Applied V-2240 from the IIS 7 Site STIG"
-
-    }
 
 }
 
@@ -250,37 +205,21 @@ function Enable-NetworkLevelAuthentication {
     https://www.stigviewer.com/stig/iis_7.0_web_site/2015-06-01/finding/V-2249
 	#>
 
-	BEGIN {
+	$terminalServerSettings =  Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices
     
-        Write-Output "Applying V-2249 from the IIS 7 Site STIG"
+	if ($terminalServerSettings.UserAuthenticationRequired -eq 0){
     
-    }
+		Write-Output "Not STIG compliant - Network Level Authentication not enabled"
+		$terminalServerSettings.SetUserAuthenticationRequired(1)
+		Write-Output "Network level authentication enabled"
 
-	PROCESS {
-
-		$terminalServerSettings =  Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices
-    
-		if ($terminalServerSettings.UserAuthenticationRequired -eq 0){
-    
-			Write-Output "Not STIG compliant - Network Level Authentication not enabled"
-			$terminalServerSettings.SetUserAuthenticationRequired(1)
-			Write-Output "Network level authentication enabled"
-
-		}
-    
-		else {
-        
-			Write-Output "STIG Compliant - Network Level Authentication already enabled for Remote Desktop"
-    
-		}
-	
 	}
-
-	END {
-
-        Write-Output "Applied V-2249 from the IIS 7 Site STIG"
-
-    }
+    
+	else {
+        
+		Write-Output "STIG Compliant - Network Level Authentication already enabled for Remote Desktop"
+    
+	}
 
 }
 
@@ -302,74 +241,58 @@ function Set-DoubleEscapingURLs {
     https://www.stigviewer.com/stig/iis_7.0_web_site/2015-06-01/finding/V-26045
 	#>	
 
-	BEGIN {
+	$serverConfig = "/system.webServer/security/requestFiltering"
+	$requestFiltering = Get-WebConfiguration -filter $serverConfig
+
+	# Apply configuration at the server level first #
+
+	if ($requestFiltering.allowDoubleEscaping -eq $true){
+        
+		Write-Output "Server configuration is not STIG compliant - setting double escaping to false"
+        
+		$requestFiltering.allowDoubleEscaping = $false
+		$requestFiltering | Set-WebConfiguration -filter $serverConfig -PSPath IIS:\
+
+	}
     
-        Write-Output "Applying V-26045 from the IIS 7 Site STIG"
-    
-    }
-
-	PROCESS {
-
-		$serverConfig = "/system.webServer/security/requestFiltering"
-		$requestFiltering = Get-WebConfiguration -filter $serverConfig
-
-		# Apply configuration at the server level first #
-
-		if ($requestFiltering.allowDoubleEscaping -eq $true){
+	else {
         
-			Write-Output "Server configuration is not STIG compliant - setting double escaping to false"
-        
-			$requestFiltering.allowDoubleEscaping = $false
-			$requestFiltering | Set-WebConfiguration -filter $serverConfig -PSPath IIS:\
-
-		}
-    
-		else {
-        
-			Write-Output "Server configuration is STIG compliant - allow double escaping already set to false"
-    
-		}
-
-		# Apply configuration to each IIS site via a loop #
-
-		$websites = Get-WebSite
-
-		foreach ($website in $websites) {
-
-	        $siteName = $website.Name
-
-            if ($iisVersion -le 7) {
-
-                 C:\Windows\System32\inetsrv\appcmd.exe set config $siteName -section:system.webServer/security/requestFiltering /allowdoubleescaping:false
-
-            } 
-            
-            else {
-
-        	    $requestFiltering = Get-WebConfiguration -filter $serverConfig -Location $siteName
-        
-                if ($requestFiltering.allowDoubleEscaping -eq $true){
-        
-			        Write-Output "$siteName is not STIG compliant - setting allow double escaping to false"
-           
-			        Set-WebConfigurationProperty -Filter $serverConfig -name allowDoubleEscaping -Value False -PSPath IIS:\sites\$siteName
-        
-	            } else {
-        
-			        Write-Output "$siteName is STIG Compliant - allow double escaping is already set to false"
-        
-			    }
-            }
-       
-		}
+		Write-Output "Server configuration is STIG compliant - allow double escaping already set to false"
     
 	}
 
-	END {
+	# Apply configuration to each IIS site via a loop #
 
-        Write-Output "Applied V-26045 from the IIS 7 Site STIG"
+	$websites = Get-WebSite
 
-    }
+	foreach ($website in $websites) {
+
+	    $siteName = $website.Name
+
+        if ($iisVersion -le 7) {
+
+                C:\Windows\System32\inetsrv\appcmd.exe set config $siteName -section:system.webServer/security/requestFiltering /allowdoubleescaping:false
+
+        } 
+            
+        else {
+
+        	$requestFiltering = Get-WebConfiguration -filter $serverConfig -Location $siteName
+        
+            if ($requestFiltering.allowDoubleEscaping -eq $true){
+        
+			    Write-Output "$siteName is not STIG compliant - setting allow double escaping to false"
+           
+			    Set-WebConfigurationProperty -Filter $serverConfig -name allowDoubleEscaping -Value False -PSPath IIS:\sites\$siteName
+        
+	        } else {
+        
+			    Write-Output "$siteName is STIG Compliant - allow double escaping is already set to false"
+        
+			}
+        }
+       
+	}
 
 }
 
@@ -391,76 +314,60 @@ function Set-HighBitCharacters {
     https://www.stigviewer.com/stig/iis_7.0_web_site/2015-06-01/finding/V-26044
 	#>
 
-	BEGIN {
-    
-        Write-Output "Applying V-26044 from the IIS 7 Site STIG"
-    
-    }
+	$serverConfig = "/system.webServer/security/requestFiltering"
+	$requestFiltering = Get-WebConfiguration -filter $serverConfig
 
-	PROCESS {
+	# Apply configuration at the server level first #
 
-		$serverConfig = "/system.webServer/security/requestFiltering"
-		$requestFiltering = Get-WebConfiguration -filter $serverConfig
-
-		# Apply configuration at the server level first #
-
-		if ($requestFiltering.allowHighBitCharacters -eq $true){
+	if ($requestFiltering.allowHighBitCharacters -eq $true){
         
-			Write-Output "Server configuration is not STIG compliant - setting allow high bit characters to false"
+		Write-Output "Server configuration is not STIG compliant - setting allow high bit characters to false"
         
-			$requestFiltering.allowHighBitCharacters = $false
-			$requestFiltering | Set-WebConfiguration -filter $serverConfig -PSPath IIS:\
+		$requestFiltering.allowHighBitCharacters = $false
+		$requestFiltering | Set-WebConfiguration -filter $serverConfig -PSPath IIS:\
 
-		}
+	}
 
-		else {
+	else {
         
-			Write-Output "Server configuration is STIG compliant - allow high bit characters already set to false"
-    
-		}
-
-		# Apply configuration to each IIS site via a loop #
-
-		$websites = Get-WebSite
-
-		foreach ($website in $websites) {
-            
-            $siteName = $website.Name
-
-            if ($iisVersion -le 7) {
-
-                 C:\Windows\System32\inetsrv\appcmd.exe set config $siteName -section:system.webServer/security/requestFiltering /allowHighBitCharacters:false
-
-            } 
-
-            else {
-        
-			    $requestFiltering = Get-WebConfiguration -filter $serverConfig -Location $siteName
-        
-			    if ($requestFiltering.allowHighBitCharacters -eq $true) {
-        
-			       Write-Output "$siteName is not STIG compliant - setting allow high bit characters to false"
-			       Set-WebConfigurationProperty -Filter $serverConfig -name allowHighBitCharacters -Value False -PSPath IIS:\sites\$siteName
-        
-			    }
-        
-			    else {
-           
-			       Write-Output "$siteName - STIG Compliant - Allow high bit characters is set to false"
-        
-			    }
-
-            }
-       
-		}
+		Write-Output "Server configuration is STIG compliant - allow high bit characters already set to false"
     
 	}
 
-	END {
+	# Apply configuration to each IIS site via a loop #
 
-        Write-Output "Applied V-26044 from the IIS 7 Site STIG"
+	$websites = Get-WebSite
 
-    }
+	foreach ($website in $websites) {
+            
+        $siteName = $website.Name
+
+        if ($iisVersion -le 7) {
+
+                C:\Windows\System32\inetsrv\appcmd.exe set config $siteName -section:system.webServer/security/requestFiltering /allowHighBitCharacters:false
+
+        } 
+
+        else {
+        
+			$requestFiltering = Get-WebConfiguration -filter $serverConfig -Location $siteName
+        
+			if ($requestFiltering.allowHighBitCharacters -eq $true) {
+        
+			    Write-Output "$siteName is not STIG compliant - setting allow high bit characters to false"
+			    Set-WebConfigurationProperty -Filter $serverConfig -name allowHighBitCharacters -Value False -PSPath IIS:\sites\$siteName
+        
+			}
+        
+			else {
+           
+			    Write-Output "$siteName - STIG Compliant - Allow high bit characters is set to false"
+        
+			}
+
+        }
+       
+	}
 
 }
 
@@ -481,32 +388,24 @@ function Set-AlternateHostName {
     .LINK
     https://www.stigviewer.com/stig/iis_7.0_web_site/2015-06-01/finding/V-13702
 	#>
-	
-	BEGIN {
-    
-        Write-Output "Applying V-13702 from the IIS 7 Site STIG"
-    
-    }
 
-	PROCESS {
+	$fqdn = "$env:computername.$env:userdnsdomain"
 
-		$fqdn = "$env:computername.$env:userdnsdomain"
+	$runtimeConfig = Get-WebConfiguration -filter "/system.webServer/serverRuntime"
 
-		$runtimeConfig = Get-WebConfiguration -filter "/system.webServer/serverRuntime"
+	if (!$runtimeConfig.alternateHostName){
 
-		if (!$runtimeConfig.alternateHostName){
-
-			Write-Output "Server is not STIG compliant - alternateHostName is blank"
+		Write-Output "Server is not STIG compliant - alternateHostName is blank"
            
-			Set-WebConfigurationProperty -Filter "/system.webServer/serverRuntime" -name alternateHostName -Value $fqdn
+		Set-WebConfigurationProperty -Filter "/system.webServer/serverRuntime" -name alternateHostName -Value $fqdn
 
-		}
+	}
 
-		else {
+	else {
 
-			Write-Output "Server is STIG Compliant - alternateHostName is $runtimeConfig.alternateHostName"
+		Write-Output "Server is STIG Compliant - alternateHostName is $runtimeConfig.alternateHostName"
 	
-		}
+	}
 		
 	<#
 		$websites = Get-WebSite
@@ -543,14 +442,6 @@ function Set-AlternateHostName {
 		}
 	#>
 
-	}
-
-	END {
-
-        Write-Output "Applied V-13702 from the IIS 7 Site STIG"
-
-    }
-
 }
 
 function Set-LogDataFields {
@@ -570,26 +461,10 @@ function Set-LogDataFields {
     .LINK
     https://www.stigviewer.com/stig/iis_7.0_web_site/2015-06-01/finding/V-13688
 	#>
-
-	BEGIN {
-    
-        Write-Output "`nApplying V-13688 from the IIS 7 Site STIG"
-    
-    }
-
-	PROCESS {
 	
-		Set-WebConfigurationProperty "/system.applicationHost/sites/siteDefaults" -name logfile.logExtFileFlags -value "Date,Time,ClientIP,UserName,ServerIP,Method,UriStem,UriQuery,HttpStatus,Win32Status,TimeTaken,ServerPort,UserAgent,Referer,HttpSubStatus"
+	Set-WebConfigurationProperty "/system.applicationHost/sites/siteDefaults" -name logfile.logExtFileFlags -value "Date,Time,ClientIP,UserName,ServerIP,Method,UriStem,UriQuery,HttpStatus,Win32Status,TimeTaken,ServerPort,UserAgent,Referer,HttpSubStatus"
     
-		Write-Output "`nConfigured IIS logs per STIG guidelines"
-
-	}
-
-	END {
-
-        Write-Output "`nApplied V-13688 from the IIS 7 Site STIG"
-
-    }
+	Write-Output "`nConfigured IIS logs per STIG guidelines"
 
 }
 

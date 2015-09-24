@@ -16,50 +16,34 @@ function Set-GlobalAuthorizationRule {
     https://www.stigviewer.com/stig/iis_7.0_web_server/2015-06-01/finding/V-26006
 	#>
 
-	BEGIN {
-    
-        Write-Output "Applying V-26006 from the IIS 7 Server STIG"
-    
-    }
+	$serverConfiguration = "/system.webServer/security/authorization/add"
+	$siteConfiguration = "/system.webServer/security/authorization/*"
 
-	PROCESS {
+	Write-Output "Restricting server level access to Administrators only"
 
-		$serverConfiguration = "/system.webServer/security/authorization/add"
-		$siteConfiguration = "/system.webServer/security/authorization/*"
+	$authRules = Get-WebConfiguration -filter $serverConfiguration
+	$authRules.Users = "Administrators"
+	$authRules | Set-WebConfiguration -filter $serverConfiguration -PSPath IIS:\
 
-		Write-Output "Restricting server level access to Administrators only"
+	# Allow All Users to access existing IIS sites #
 
-		$authRules = Get-WebConfiguration -filter $serverConfiguration
-		$authRules.Users = "Administrators"
-		$authRules | Set-WebConfiguration -filter $serverConfiguration -PSPath IIS:\
+	$websites = Get-WebSite
 
-		# Allow All Users to access existing IIS sites #
+	foreach ($website in $websites) {
 
-		$websites = Get-WebSite
+		$siteName = $website.Name
 
-		foreach ($website in $websites) {
-
-			$siteName = $website.Name
-
-			Write-Output "$siteName authorization reset to All Users"
+		Write-Output "$siteName authorization reset to All Users"
         
-			Set-Location "C:\Windows\system32\inetsrv"	
+		Set-Location "C:\Windows\system32\inetsrv"	
 
-			.\appcmd.exe set config $siteName -section:system.webServer/security/authorization /+"[accessType='Allow',Users='All Users']"
-            .\appcmd.exe set config $siteName -section:system.webServer/security/authorization /-"[accessType='Allow',Users='Administrators']"
+		.\appcmd.exe set config $siteName -section:system.webServer/security/authorization /+"[accessType='Allow',Users='All Users']"
+        .\appcmd.exe set config $siteName -section:system.webServer/security/authorization /-"[accessType='Allow',Users='Administrators']"
 
-			#Set-WebConfiguration -Filter $siteConfiguration -Value (@{AccessType="Allow"; Users="*"}) -PSPath IIS: -Location $siteName  
+		#Set-WebConfiguration -Filter $siteConfiguration -Value (@{AccessType="Allow"; Users="*"}) -PSPath IIS: -Location $siteName  
        
-		}
-
 	}
 
-    END {
-
-        Write-Output "Applied V-26006 from the IIS 7 Server STIG"
-
-    }
-    
 }
 
 function Disable-FileSystemObject {
@@ -107,7 +91,6 @@ function Disable-FileSystemObject {
 	}
 
 }
-
 
 function Disable-AnonymousAccess {
 	<#
@@ -170,33 +153,17 @@ function Set-GlobalTrustLevel {
     https://www.stigviewer.com/stig/iis_7.0_web_site/2015-06-01/finding/V-26034
 	#>
 
-	BEGIN {
-    
-        Write-Output "Applying V-26034 from the IIS 7 Site STIG"
-    
-    }
-
-	PROCESS {
-
-		$configuration = "/system.web/trust"
-		$sharepointWebServices = Get-WebSite -Name "SharePoint Web Services"
+	$configuration = "/system.web/trust"
+	$sharepointWebServices = Get-WebSite -Name "SharePoint Web Services"
 	
-		C:\Windows\System32\inetsrv\appcmd.exe set config /commit:WEBROOT /section:trust /level:Medium
+	C:\Windows\System32\inetsrv\appcmd.exe set config /commit:WEBROOT /section:trust /level:Medium
 
-		Set-WebConfigurationProperty -filter $configuration -name level -value Medium
+	Set-WebConfigurationProperty -filter $configuration -name level -value Medium
     
-		if ($sharepointWebServices) {
+	if ($sharepointWebServices) {
         
-			Set-WebConfigurationProperty -filter $configuration -name level -value Full -PSPath "IIS:\Sites\SharePoint Web Services"
+		Set-WebConfigurationProperty -filter $configuration -name level -value Full -PSPath "IIS:\Sites\SharePoint Web Services"
     
-		}
-	
 	}
-
-	END {
-
-        Write-Output "Applied V-26034 from the IIS 7 Site STIG"
-
-    }
-
+	
 }

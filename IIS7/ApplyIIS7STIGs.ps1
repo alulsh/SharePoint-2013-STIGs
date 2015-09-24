@@ -7,7 +7,7 @@ Import-Module IIS7STIGs
 
 $moduleBase = (Get-Module IIS7STIGs).ModuleBase
 $blacklist = Join-Path -Path $moduleBase -ChildPath "Blacklist.csv"
-$fileExtensionsList = Join-Path -Path $moduleBase -ChildPath "AllowedFileExtensions.csv
+$fileExtensionsList = Join-Path -Path $moduleBase -ChildPath "AllowedFileExtensions.csv"
 
 ### IIS 7 Server STIGs ###
 
@@ -20,10 +20,6 @@ Remove-SampleCode
 Write-Output "`n ----- Applying V-2261 from IIS 7 Server -----"
 
 Disable-SMTP
-
-Write-Output "`n ----- Applying V-26006 from IIS 7 Server -----"
-
-Set-GlobalAuthorizationRule
 
 ### IIS 7 Site STIGs ###
 

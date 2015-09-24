@@ -1,10 +1,10 @@
 # Update with the location of the downloaded module files # 
-$downloadFolder = "C:\IIS7STIGs\"
+$downloadFolder = "C:\SQL2012STIGs\"
 
 # Get Program Files directory and set Modules directory path #
 $userProfile = $env:USERPROFILE
 $modulesPath = Join-Path -Path $userProfile -ChildPath "Documents\WindowsPowerShell\Modules\"
-$iis7ModulePath = Join-Path -Path $modulesPath -ChildPath "IIS7STIGs\"
+$sql12ModulePath = Join-Path -Path $modulesPath -ChildPath "SQL2012STIGs\"
 
 if (!(Test-Path $modulesPath)) {
 
@@ -14,12 +14,12 @@ if (!(Test-Path $modulesPath)) {
 
 }
 
-if (!(Test-Path $iis7ModulePath)) {
+if (!(Test-Path $sql12ModulePath)) {
 
-    Write-Output "$iis7ModulePath does not exist - creating"
+    Write-Output "$sql12ModulePath does not exist - creating"
 
-    New-Item $iis7ModulePath -type directory
+    New-Item $sql12ModulePath -type directory
 
-    Copy-Item -Path $downloadFolder\* -Destination $iis7ModulePath -Recurse
+    Copy-Item -Path $downloadFolder\* -Destination $sql12ModulePath -Recurse
 
 }

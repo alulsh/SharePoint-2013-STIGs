@@ -1,0 +1,14 @@
+[Version] 
+Signature= $Windows NT$
+
+[NewRequest] 
+Subject = "CN=hostname"
+Exportable = TRUE
+KeyLength = 2048
+KeySpec = 1                         ; AT_KEYEXCHANGE 
+KeyUsage = 0xA0                     ; Digital Signature, Key Encipherment 
+MachineKeySet = True                ; The key belongs to the local computer account 
+ProviderName = "Microsoft RSA SChannel Cryptographic Provider" 
+ProviderType = 12
+SMIME = FALSE 
+RequestType = PKCS10
