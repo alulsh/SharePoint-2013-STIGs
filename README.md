@@ -15,7 +15,21 @@ At the moment only STIGs for IIS 7 (updated for SharePoint 2013) have been compl
 Open up the PowerShell console or ISE and run ```Install-Module IIS7STIGs```. The module should load with no errors and its functions should be available for use.
 
 ### Configuration
-Run ```ApplyIIS7STIGs.ps1``` to apply all of the STIG configuration scripts with the provided IIS Handler Mapping blacklist and request filtering allowed file extensions CSVs. This script can be modified as necessary to remove STIG configurations or to use your own CSV files. 
+Run ```ApplyIIS7STIGs.ps1``` to apply all of the STIG configuration scripts with the provided IIS Handler Mapping blacklist and request filtering allowed file extensions CSVs. This script can be modified as necessary to remove STIG configurations or to use your own CSV files.
+
+## SQL2012 STIGs Installation and Configuration
+
+### Installation
+1. Download all of the files in the SQL2012 and PermissionsFunctions folder from Github and place on two different folders on your local machine. For example, ```C:\SQL2012STIGs\``` and ```C:\PermissionsFunctions\```.
+2. Update the ```$downloadFolder``` variable in ```InstallModule.ps1``` for both the SQL 2012 and Permissions Functions modules with the path to the relevant folders above. 
+3. Run ```InstallModule.ps1``` for each module.
+4. The module files will be copied to the modules folder for your user account. This is typically ```C:\Users\username\Documents\WindowsPowerShell\Modules\```. If the folder does not exist already it will be created as part of the installation script.
+
+### Verification
+Open up the PowerShell console or ISE and run ```Install-Module PermissionsFunctions``` and ```Install-Module SQL2012STIGs```. The modules should load with no errors and their functions should be available for use.
+
+### Configuration
+Run ```ApplySQLSTIGs.ps1``` to apply all of the STIG configuration scripts for SQL 2012. This script can be modified as necessary to remove specific STIG configurations.
 
 ## Disclaimer
 All scripts and supporting files are offered "as is" with no warranty. While I have tested these scripts in my environment, you should always vet and verify these scripts in a test environment before deploying them to production servers.
