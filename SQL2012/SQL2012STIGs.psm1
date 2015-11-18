@@ -1,3 +1,36 @@
+# Helper function to get SQL Server service accounts based on the instance name
+
+function Get-SqlServerAccounts {
+    
+    [CmdletBinding()]
+    Param 
+    (
+        [parameter(Mandatory=$true)]
+        [string]$InstanceName
+    )
+
+    $SqlAccounts = @{}
+
+    if ($InstanceName -eq "MSSQLSERVER") {
+    
+        $SqlAccounts.SqlServerAccount = "NT SERVICE\MSSQLSERVER"
+        $SqlAccounts.SqlAgentAccount = "NT SERVICE\SQLSERVERAGENT"
+        $SqlAccounts.FullTextAccount = "NT SERVICE\MSSQLFDLauncher"
+        
+    }
+
+    else {
+            
+        $SqlAccounts.SqlServerAccount = "NT SERVICE\MSSQL`$$InstanceName"
+        $SqlAccounts.SqlAgentAccount = "NT SERVICE\SQLAGENT`$$InstanceName"         
+        $SqlAccounts.FullTextAccount = "NT SERVICE\MSSQLFDLauncher`$$InstanceName"  
+        
+    }
+
+    return $SqlAccounts
+
+}
+
 # SQL 2012 Database STIGs
 
 function Set-MaxConnections {
@@ -190,21 +223,7 @@ function Set-SQLSoftwareLibrariesPermissions {
         [string]$InstanceName
     )
 
-    if ($instanceName -eq "MSSQLSERVER") {
-    
-        $sqlServerAccount = "NT SERVICE\MSSQLSERVER"
-        $sqlAgentAccount = "NT SERVICE\SQLSERVERAGENT"
-        $fullTextAccount = "NT SERVICE\MSSQLFDLauncher"
-        
-    }
-
-    else {
-            
-        $sqlServerAccount = "NT SERVICE\MSSQL`$$instanceName"
-        $sqlAgentAccount = "NT SERVICE\SQLAGENT`$$instanceName"         
-        $fullTextAccount = "NT SERVICE\MSSQLFDLauncher`$$instanceName"  
-        
-    }
+    $accounts = Get-SqlServerAccounts -InstanceName $InstanceName
     
     $sqlInstallation = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSSQL11.$instanceName\Setup\").SqlProgramDir
     $instanceInstallation = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSSQL11.$instanceName\Setup\").SqlPath
@@ -219,8 +238,8 @@ function Set-SQLSoftwareLibrariesPermissions {
     
         Disable-Inheritance -Path $binnFolder
         Revoke-Permissions -SecurityPrincipal "BUILTIN\USERS" -Path $binnFolder
-        Grant-Permissions -SecurityPrincipal $sqlServerAccount -Path $binnFolder -Permissions "Read,ReadAndExecute"
-        Grant-Permissions -SecurityPrincipal $sqlAgentAccount -Path $binnFolder -Permissions "FullControl"
+        Grant-Permissions -SecurityPrincipal $accounts.SqlServerAccount -Path $binnFolder -Permissions "Read,ReadAndExecute"
+        Grant-Permissions -SecurityPrincipal $accounts.SqlAgentAccount -Path $binnFolder -Permissions "FullControl"
 
     }
 
@@ -246,9 +265,9 @@ function Set-SQLSoftwareLibrariesPermissions {
         
         # Network Service needs Read, ReadAndExecute rights for SQL Server Configuration Manager to work
         Grant-Permissions -SecurityPrincipal "NT AUTHORITY\NETWORK SERVICE" -Path $sharedCodeFolder -Permissions "Read,ReadAndExecute"
-        Grant-Permissions -SecurityPrincipal $sqlServerAccount -Path $sharedCodeFolder -Permissions "Read,ReadAndExecute"
-        Grant-Permissions -SecurityPrincipal $sqlAgentAccount -Path $sharedCodeFolder -Permissions "Read,ReadAndExecute,Write"
-        Grant-Permissions -SecurityPrincipal $fullTextAccount -Path $sharedCodeFolder -Permissions "Read,Write"
+        Grant-Permissions -SecurityPrincipal $accounts.SqlServerAccount -Path $sharedCodeFolder -Permissions "Read,ReadAndExecute"
+        Grant-Permissions -SecurityPrincipal $accounts.SqlAgentAccount -Path $sharedCodeFolder -Permissions "Read,ReadAndExecute,Write"
+        Grant-Permissions -SecurityPrincipal $accounts.FullTextAccount -Path $sharedCodeFolder -Permissions "Read,Write"
 
     }
 
@@ -264,7 +283,7 @@ function Set-SQLSoftwareLibrariesPermissions {
 
         Disable-Inheritance -Path $installFolder
         Revoke-Permissions -SecurityPrincipal "BUILTIN\USERS" -Path $installFolder
-        Grant-Permissions -SecurityPrincipal $sqlServerAccount -Path $binnFolder -Permissions "Read,ReadAndExecute" 
+        Grant-Permissions -SecurityPrincipal $accounts.SqlServerAccount -Path $binnFolder -Permissions "Read,ReadAndExecute" 
     }
 
     else {
@@ -453,19 +472,7 @@ function Set-SQLServerAuditing {
     $cleanTraceFilePath = $traceFile.Replace("'","")
     $traceFolder = [System.IO.Path]::GetDirectoryName($cleanTraceFilePath)
 
-    if ($instanceName -eq "MSSQLSERVER") {
-    
-        $sqlServerAccount = "NT SERVICE\MSSQLSERVER"
-        $sqlAgentAccount = "NT SERVICE\SQLSERVERAGENT"
-        
-    }
-
-    else {
-            
-        $sqlServerAccount = "NT SERVICE\MSSQL`$$instanceName"
-        $sqlAgentAccount = "NT SERVICE\SQLAGENT`$$instanceName"         
-            
-    }
+    $accounts = Get-SqlServerAccounts -InstanceName $InstanceName
     
     if (!(Test-Path $traceFolder)) {
     
@@ -477,8 +484,8 @@ function Set-SQLServerAuditing {
 
         # Grant permissions to database engine and SQL Agent accounts
 
-        Grant-Permissions -SecurityPrincipal $sqlServerAccount -Path $traceFolder -Permissions "FullControl"
-        Grant-Permissions -SecurityPrincipal $sqlAgentAccount -Path $traceFolder -Permissions "Read,ReadAndExecute,Write"
+        Grant-Permissions -SecurityPrincipal $accounts.SqlServerAccount -Path $traceFolder -Permissions "FullControl"
+        Grant-Permissions -SecurityPrincipal $accounts.SqlAgentAccount -Path $traceFolder -Permissions "Read,ReadAndExecute,Write"
     
     }
 
@@ -488,8 +495,8 @@ function Set-SQLServerAuditing {
         
         # Grant permission to database engine and sql agent accounts
 
-        Grant-Permissions -SecurityPrincipal $sqlServerAccount -Path $traceFolder -Permissions "FullControl"
-        Grant-Permissions -SecurityPrincipal $sqlAgentAccount -Path $traceFolder -Permissions "Read,ReadAndExecute,Write"
+        Grant-Permissions -SecurityPrincipal $accounts.SqlServerAccount -Path $traceFolder -Permissions "FullControl"
+        Grant-Permissions -SecurityPrincipal $accounts.SqlAgentAccount -Path $traceFolder -Permissions "Read,ReadAndExecute,Write"
     
     }
 
@@ -576,6 +583,8 @@ function Harden-SQLServerAuditing {
 
     # Using results from the array, write PowerShell function to remove local Users group from locations #
 
+    $accounts = Get-SqlServerAccounts -InstanceName $InstanceName
+
     foreach ($path in $auditPaths) {
 
         Write-Output "Audit file location is $path"
@@ -587,23 +596,9 @@ function Harden-SQLServerAuditing {
         Revoke-Permissions -SecurityPrincipal "BUILTIN\USERS" -Path $path
         Revoke-Permissions -SecurityPrincipal "CREATOR OWNER" -Path $path
         Revoke-Permissions -SecurityPrincipal "SYSTEM" -Path $path
-
-        if ($instanceName -eq "MSSQLSERVER") {
-    
-            Grant-Permissions -SecurityPrincipal "NT SERVICE\MSSQLSERVER" -Path $path -Permissions "FullControl"
-            Grant-Permissions -SecurityPrincipal "NT SERVICE\SQLSERVERAGENT" -Path $path -Permissions "Read,ReadAndExecute,Write"
         
-        }
-
-        else {
-            
-            $sqlServerAccount = "NT SERVICE\MSSQL`$$instanceName"
-            $sqlAgentAccount = "NT SERVICE\SQLAGENT`$$instanceName"         
-            
-            Grant-Permissions -SecurityPrincipal $sqlServerAccount -Path $path -Permissions "FullControl"
-            Grant-Permissions -SecurityPrincipal $sqlAgentAccount -Path $path -Permissions "Read,ReadAndExecute,Write"
-            
-        }
+        Grant-Permissions -SecurityPrincipal $accounts.SqlServerAccount -Path $path -Permissions "FullControl"
+        Grant-Permissions -SecurityPrincipal $accounts.SqlAgentAccount -Path $path -Permissions "Read,ReadAndExecute,Write"
         
         Revoke-Permissions -SecurityPrincipal "BUILTIN\Administrators" -Path $path
         Grant-Permissions -SecurityPrincipal "BUILTIN\Administrators" -Path $path -Permissions "Read"
@@ -617,7 +612,7 @@ function Harden-SQLServerAuditing {
 # Generate SSL Certificate #
 
 function New-CertificateSigningRequest {
-    
+
     <#
     .SYNOPSIS
     Mitigates V-40921, V-40907, V-41308, V-41309, and and V-41310 from the SQL 2012 Database Instance STIG.
@@ -739,4 +734,144 @@ function Remove-Permissions {
     
     }
     
+}
+
+function Import-CSR {
+
+    <#
+    .SYNOPSIS
+    Mitigates V-40921, V-40907, V-41308, V-41309, and and V-41310 from the SQL 2012 Database Instance STIG.
+    .DESCRIPTION
+    Imports a signed certificate signing request into the CERT:\LocalMachine\My certificate store.
+    .PARAM Path
+    Location of the signed certificate request, generally with a file extension of .cer.
+    .EXAMPLE
+    Import-CSR -Path C:\certs\signedCSR.cer
+    .COMPONENT
+    SQL Server 2012 Database Instance
+    .LINK
+    http://iase.disa.mil/stigs/app-security/database/Pages/index.aspx
+    .LINK
+    http://iasecontent.disa.mil/stigs/zip/July2015/U_SQL_Server_2012_V1R7_STIG.zip
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-40921
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-41307
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-41308
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-41309
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-41310
+    #>
+
+    [CmdletBinding()]
+    Param 
+    (
+        [parameter(Mandatory=$true)]
+        [string]$Path
+    )
+
+    certreq -accept $Path
+
+}
+
+function Set-ForceEncryption {
+
+    <#
+    .SYNOPSIS
+    Mitigates V-40921, V-40907, V-41308, V-41309, and and V-41310 from the SQL 2012 Database Instance STIG.
+    .DESCRIPTION
+    Sets Force Encryption to true in SQL Server network protocol settings.
+    .EXAMPLE
+    Set-ForceEncryption
+    .COMPONENT
+    SQL Server 2012 Database Instance
+    .LINK
+    http://iase.disa.mil/stigs/app-security/database/Pages/index.aspx
+    .LINK
+    http://iasecontent.disa.mil/stigs/zip/July2015/U_SQL_Server_2012_V1R7_STIG.zip
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-40921
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-41307
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-41308
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-41309
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-41310
+    #>
+
+    $forceEncryption = Get-WmiObject -Namespace "root\Microsoft\SqlServer\ComputerManagement11" -Class "ServerSettingsGeneralFlag" | Where-Object {$_.FlagName -eq "ForceEncryption"}
+
+    $forceEncryption.SetValue($true)
+
+}
+
+function Grant-ReadAccessToPrivateKey {
+
+    <#
+    .SYNOPSIS
+    Mitigates V-40921, V-40907, V-41308, V-41309, and V-41310 from the SQL 2012 Database Instance STIG.
+    .DESCRIPTION
+    Grants the SQL Server database engine service account read access to the appropriate machine key in C:\ProgramData\Microsoft\Crypto\RSA\MachineKeys. This allows the SQL Server database engine service to start successfully on a least-privilege installation after SSL is enabled.
+    .PARAM InstanceName
+    Name of the instance of SQL Server to be STIG'd. If it is the default instance, use MSSQLSERVER.
+    .PARAM CommonName
+    Common name (CN) of the certificate used to enable SSL for SQL Server
+    .EXAMPLE
+    Grant-ReadAccessToPrivateKey -InstanceName "MSSQLSERVER" -CommonName "example.domain.com"
+    .COMPONENT
+    SQL Server 2012 Database Instance
+    .LINK
+    http://iase.disa.mil/stigs/app-security/database/Pages/index.aspx
+    .LINK
+    http://iasecontent.disa.mil/stigs/zip/July2015/U_SQL_Server_2012_V1R7_STIG.zip
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-40921
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-41307
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-41308
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-41309
+    .LINK
+    https://www.stigviewer.com/stig/microsoft_sql_server_2012_database_instance/2015-06-23/finding/V-41310
+    #>
+
+    [CmdletBinding()]
+    Param 
+    (
+    
+        [parameter(Mandatory=$true)]
+        [string]$InstanceName,
+
+        [parameter(Mandatory=$true)]
+        [string]$CommonName
+
+    )
+
+    $accounts = Get-SqlServerAccounts -InstanceName $instanceName
+
+    $sqlServerAccount = $accounts.SqlServerAccount
+
+    $cert = Get-ChildItem -Path CERT:\LocalMachine\My | Where-Object { $_.Subject -match $CommonName }
+
+    $rsaFile = $cert.PrivateKey.CspKeyContainerinfo.UniqueKeyContainername
+
+    $machineKeys = "C:\ProgramData\Microsoft\Crypto\RSA\MachineKeys\"
+
+    $privateKeyPath = $machineKeys+$rsaFile
+
+    $acl = Get-ACL -Path $privateKeypath
+
+    $permission = $sqlServerAccount,"Read","Allow"
+
+    $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule $permission
+
+    $acl.AddAccessRule($accessRule)
+
+    Set-Acl -Path $privateKeyPath -AclObject $acl
+
 }
