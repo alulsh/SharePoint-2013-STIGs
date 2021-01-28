@@ -1,3 +1,5 @@
+# Archived
+I no longer maintain this repository as I have not worked professionally with SharePoint since 2015.
 # SharePoint 2013 STIGs
 PowerShell scripts to automatically apply the [SharePoint 2013](http://iase.disa.mil/stigs/app-security/app-servers/Pages/sharepoint.aspx), [IIS 7 Server](http://iase.disa.mil/stigs/app-security/web-servers/Pages/iis.aspx), [IIS 7 Site](http://iase.disa.mil/stigs/app-security/web-servers/Pages/iis.aspx), and [SQL 2012](http://iase.disa.mil/stigs/app-security/database/Pages/sql.aspx) Defense Information Systems Agency (DISA) Security Technical Implementation Guides (STIGs) to SharePoint 2013 farms.
 
